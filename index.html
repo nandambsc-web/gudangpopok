@@ -92,6 +92,8 @@ label{font-weight:700;font-size:14px}
 .add:disabled{opacity:.5;cursor:not-allowed}
 .sz{width:64px;height:64px;overflow:hidden}.pi{width:100%;height:100%;object-fit:cover}
 .sk{flex-wrap:wrap}.skr{display:flex;align-items:center;gap:6px}.th{width:32px;height:32px;border-radius:8px;object-fit:cover}.ph{cursor:pointer;padding:2px 10px;font-size:13px}
+.pl{display:flex;align-items:center;gap:4px;font-weight:700}.pz{width:104px;padding:6px}
+.abh{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}.bk{display:flex;gap:6px;align-items:center}.bk .f{width:84px;padding:4px 8px}.bk .chip{padding:3px 10px;font-size:13px}
 </style>
 </head>
 <body>
@@ -286,11 +288,11 @@ function admRender(){
   DRAFT.brands.forEach(function(b,bi){
     var rows = b.items.map(function(r,ri){
       var t = r.j+" "+r.u; if (f && (b.n+" "+t).toLowerCase().indexOf(f)<0) return "";
-      return '<div class="sk"><span>'+esc(t)+'</span><div class="skr">'+(r.img?'<img class="th" src="'+r.img+'" alt="">':'')+'<label class="chip ph">Foto<input type="file" accept="image/*" hidden data-up="'+bi+'-'+ri+'"></label>'+(r.img?'<button type="button" class="rm" data-noimg="'+bi+'-'+ri+'">Hapus</button>':'')+'</div><div class="step"><button type="button" data-d="-1" aria-label="Kurangi stok">−</button>'+
+      return '<div class="sk"><span>'+esc(t)+'</span><div class="skr">'+(r.img?'<img class="th" src="'+r.img+'" alt="">':'')+'<label class="chip ph">Foto<input type="file" accept="image/*" hidden data-up="'+bi+'-'+ri+'"></label>'+(r.img?'<button type="button" class="rm" data-noimg="'+bi+'-'+ri+'">Hapus</button>':'')+'</div><label class="pl">Rp <input class="f pz" type="number" min="0" step="500" data-pr="1" data-b="'+bi+'" data-r="'+ri+'" value="'+r.p+'" aria-label="Harga jual '+esc(b.n+" "+t)+'"></label><div class="step"><button type="button" data-d="-1" aria-label="Kurangi stok">−</button>'+
         '<input class="f" type="number" min="0" data-b="'+bi+'" data-r="'+ri+'" value="'+r.s+'" aria-label="Stok '+esc(b.n+" "+t)+'"><button type="button" data-d="1" aria-label="Tambah stok">+</button></div></div>';
     }).join("");
     if (!rows) return;
-    h += '<div class="ab"><div class="abh" style="background:'+b.c+'"><b>'+esc(b.n)+'</b></div>'+rows+'</div>';
+    h += '<div class="ab"><div class="abh" style="background:'+b.c+'"><b>'+esc(b.n)+'</b><span class="bk"><input class="f" type="number" step="500" placeholder="±Rp" data-bk="1" aria-label="Ubah semua harga '+esc(b.n)+'"><button type="button" class="chip" data-apply="'+bi+'">Ubah semua harga</button></span></div>'+rows+'</div>';
   });
   $("admBody").innerHTML = h || '<p class="meta">Tidak ada SKU yang cocok.</p>'; $("admBody").scrollTop = sc;
 }
@@ -300,10 +302,18 @@ $("admBody").addEventListener("input", function(e){
   var t = e.target;
   if (t.id==="wa"){ DRAFT.wa = t.value.replace(/\D/g,""); }
   else if (t.id==="pay"){ DRAFT.pay = t.value; }
+  else if (t.dataset.pr!==undefined){ DRAFT.brands[+t.dataset.b].items[+t.dataset.r].p = Math.max(0, parseInt(t.value,10)||0); }
   else if (t.dataset.r!==undefined){ DRAFT.brands[+t.dataset.b].items[+t.dataset.r].s = Math.max(0, parseInt(t.value,10)||0); }
 });
 $("admBody").addEventListener("click", function(e){
   var b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.apply!==undefined){
+    var bi = +b.dataset.apply, inp0 = b.parentNode.querySelector("input"), v = parseInt(inp0.value,10)||0;
+    if (!v){ $("admErr").textContent = "Isi angka perubahan harga, misalnya 5000 atau -5000."; return; }
+    DRAFT.brands[bi].items.forEach(function(r){ r.p = Math.max(0, r.p+v); });
+    $("admErr").textContent = "Harga semua SKU "+DRAFT.brands[bi].n+" diubah "+(v>0?"+":"")+v.toLocaleString("id-ID")+". Tekan Simpan perubahan.";
+    admRender(); return;
+  }
   if (b.dataset.d){ var inp = b.parentNode.querySelector("input"); setStok(inp, (parseInt(inp.value,10)||0)+Number(b.dataset.d)); }
   if (b.dataset.noimg!==undefined){ var q = b.dataset.noimg.split("-"); delete DRAFT.brands[+q[0]].items[+q[1]].img; admRender(); }
 });
@@ -332,7 +342,7 @@ $("admBody").addEventListener("change", function(e){
     .catch(function(){ st.textContent = "Gagal mengunggah foto. Coba file lain atau ulangi."; });
 });
 $("admBtn").onclick = function(){
-  DRAFT = JSON.parse(JSON.stringify(DATA)); $("admQ").value = ""; admRender(); $("admErr").textContent = "";
+  DRAFT = JSON.parse(JSON.stringify(DATA)); DRAFT.brands.forEach(function(b){ var m = b.mk||0; b.items.forEach(function(r){ r.p += m; }); b.mk = 0; }); $("admQ").value = ""; admRender(); $("admErr").textContent = "";
   $("adm").classList.add("on"); $("adm").setAttribute("aria-hidden","false"); $("scrim").classList.add("on");
 };
 function buildHtml(d){
